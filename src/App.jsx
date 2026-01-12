@@ -6,15 +6,14 @@ const Icons = {
   Group: () => <svg className="icon" viewBox="0 0 24 24"><path d="M2 2h20v20H2z" fill="none"/><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z" fill="currentColor"/></svg>,
   Undo: () => <svg className="icon" viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" fill="currentColor"/></svg>,
   Trash: () => <svg className="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/></svg>,
-  Close: () => <svg className="icon" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/></svg>,
-  Sort: () => <svg className="icon" viewBox="0 0 24 24"><path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z" fill="currentColor"/></svg>,
-  Globe: () => <svg className="icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" fill="currentColor"/></svg>
+  Globe: () => <svg className="icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" fill="currentColor"/></svg>,
+  AI: () => <svg className="icon" viewBox="0 0 24 24"><path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58s9.14-3.47 12.65 0L21 3v7.12z" fill="currentColor"/></svg>
 };
 
 function App() {
-  const { tabs, closeTab, groupTabs, autoGroupTabs, undoGrouping, canUndo, sortBy, setSortBy } = useTabs();
+  const { tabs, closeTab, autoGroupTabs, undoGrouping, canUndo, sortBy, setSortBy, groupingMode, setGroupingMode, aiAvailable } = useTabs();
 
-  // Calculate duplicates set for quick lookup
+  // Calculate duplicates
   const duplicateSet = new Set();
   const urlSet = new Set();
   const duplicateTabs = [];
@@ -28,9 +27,16 @@ function App() {
     }
   });
 
-  // Helper to extract domain for display
   const getDomain = (url) => {
     try { return new URL(url).hostname.replace('www.', ''); } catch { return ''; }
+  };
+
+  const getModeLabel = () => {
+    switch (groupingMode) {
+      case 'domain': return '🌐';
+      case 'ai': return '✨';
+      default: return '📁';
+    }
   };
 
   return (
@@ -46,19 +52,45 @@ function App() {
           </div>
         </div>
 
+        {/* Mode Selector Row */}
+        <div className="mode-row">
+          <span className="mode-label">Group by:</span>
+          <div className="mode-buttons">
+            <button 
+              className={`mode-btn ${groupingMode === 'category' ? 'active' : ''}`}
+              onClick={() => setGroupingMode('category')}
+              title="Group by category (Work, Entertainment, etc.)"
+            >
+              📁 Category
+            </button>
+            <button 
+              className={`mode-btn ${groupingMode === 'domain' ? 'active' : ''}`}
+              onClick={() => setGroupingMode('domain')}
+              title="Group by website domain"
+            >
+              🌐 Domain
+            </button>
+            <button 
+              className={`mode-btn ${groupingMode === 'ai' ? 'active' : ''}`}
+              onClick={() => setGroupingMode('ai')}
+              title={aiAvailable ? "AI-powered grouping" : "AI not available - will use Category"}
+            >
+              ✨ AI {!aiAvailable && <span className="badge-small">β</span>}
+            </button>
+          </div>
+        </div>
+
         <div className="toolbar">
-           {/* Primary Action Button */}
            {canUndo ? (
             <button className="btn" onClick={undoGrouping}>
               <Icons.Undo /> Undo
             </button>
           ) : (
             <button className="btn btn-primary" onClick={autoGroupTabs}>
-              <Icons.Group /> Tidy Up
+              {getModeLabel()} Tidy Up
             </button>
           )}
 
-          {/* Sort Dropdown */}
           <div className="select-wrapper">
             <select 
               value={sortBy} 
@@ -73,7 +105,6 @@ function App() {
             <div className="select-arrow">▼</div>
           </div>
 
-          {/* Dedupe Button (Conditional) */}
           {duplicateTabs.length > 0 && (
             <button 
               className="btn btn-danger" 

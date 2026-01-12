@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { classifyTabs, getCategoryColor } from '../utils/categoryClassifier';
 
 export const useTabs = () => {
   const [tabs, setTabs] = useState([]);
   const [canUndo, setCanUndo] = useState(false);
   const [sortBy, setSortBy] = useState('default');
+  const [groupingMode, setGroupingMode] = useState('category'); // 'domain' | 'category' | 'ai'
+  const [aiAvailable, setAiAvailable] = useState(false);
   const groupedTabsRef = useRef([]);
-  const originalOrderRef = useRef([]); // Store ALL tabs order before grouping
+  const originalOrderRef = useRef([]);
 
   const fetchTabs = async () => {
     try {
@@ -14,6 +17,27 @@ export const useTabs = () => {
     } catch (error) {
       console.error("Error fetching tabs:", error);
     }
+  };
+
+  // Load saved preferences and check AI availability
+  useEffect(() => {
+    // Load grouping mode preference
+    chrome.storage.local.get(['groupingMode'], (result) => {
+      if (result.groupingMode) {
+        setGroupingMode(result.groupingMode);
+      }
+    });
+
+    // Check if Chrome AI is available
+    if (typeof window !== 'undefined' && window.ai) {
+      setAiAvailable(true);
+    }
+  }, []);
+
+  // Save grouping mode preference
+  const updateGroupingMode = (mode) => {
+    setGroupingMode(mode);
+    chrome.storage.local.set({ groupingMode: mode });
   };
 
   useEffect(() => {
@@ -61,23 +85,19 @@ export const useTabs = () => {
     await chrome.tabs.remove(tabId);
   };
 
-  const groupTabs = async (tabIds, title = "New Group") => {
+  const groupTabsWithColor = async (tabIds, title, color = 'grey') => {
     const groupId = await chrome.tabs.group({ tabIds });
-    await chrome.tabGroups.update(groupId, { title });
+    await chrome.tabGroups.update(groupId, { title, color });
     return groupId;
   };
 
-  const autoGroupTabs = async () => {
-    // Save original order of ALL tabs (by ID sequence)
-    originalOrderRef.current = tabs.map(tab => tab.id);
-
+  // Group by domain (original behavior)
+  const groupByDomain = async () => {
     const domains = {};
-    const tabsToGroup = [];
-
+    
     tabs.forEach(tab => {
       try {
         if (tab.groupId && tab.groupId !== -1) return;
-        
         const url = new URL(tab.url);
         const domain = url.hostname.replace('www.', '');
         if (!domains[domain]) domains[domain] = [];
@@ -85,15 +105,100 @@ export const useTabs = () => {
       } catch (e) {}
     });
 
+    const grouped = [];
     for (const [domain, tabIds] of Object.entries(domains)) {
       if (tabIds.length > 1) {
-        await groupTabs(tabIds, domain);
-        tabsToGroup.push(...tabIds);
+        await groupTabsWithColor(tabIds, domain);
+        grouped.push(...tabIds);
       }
     }
+    return grouped;
+  };
 
-    if (tabsToGroup.length > 0) {
-      groupedTabsRef.current = tabsToGroup;
+  // Group by category (smart mode)
+  const groupByCategory = async () => {
+    const categoryGroups = classifyTabs(tabs);
+    const grouped = [];
+    
+    for (const [category, tabIds] of Object.entries(categoryGroups)) {
+      if (tabIds.length > 1) {
+        const color = getCategoryColor(category);
+        await groupTabsWithColor(tabIds, category, color);
+        grouped.push(...tabIds);
+      }
+    }
+    return grouped;
+  };
+
+  // Group using Chrome AI (experimental)
+  const groupByAI = async () => {
+    if (!window.ai) {
+      console.warn('Chrome AI not available, falling back to category mode');
+      return groupByCategory();
+    }
+
+    try {
+      // Create AI session
+      const session = await window.ai.createTextSession();
+      
+      // Build prompt
+      const tabInfo = tabs
+        .filter(t => !t.groupId || t.groupId === -1)
+        .map(t => `[${t.id}] ${t.title}`)
+        .join('\n');
+      
+      const prompt = `Categorize these browser tabs into logical groups. Return JSON only.
+Format: {"GroupName": [tab_ids], ...}
+Use 3-6 groups max. Be concise with group names.
+
+Tabs:
+${tabInfo}`;
+
+      const response = await session.prompt(prompt);
+      
+      // Parse AI response
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Invalid AI response');
+      
+      const groups = JSON.parse(jsonMatch[0]);
+      const grouped = [];
+      
+      for (const [groupName, tabIds] of Object.entries(groups)) {
+        if (tabIds.length > 1) {
+          await groupTabsWithColor(tabIds, groupName);
+          grouped.push(...tabIds);
+        }
+      }
+      
+      return grouped;
+    } catch (error) {
+      console.error('AI grouping failed:', error);
+      return groupByCategory(); // Fallback
+    }
+  };
+
+  // Main grouping function that routes to the right algorithm
+  const autoGroupTabs = async () => {
+    // Save original order
+    originalOrderRef.current = tabs.map(tab => tab.id);
+
+    let grouped = [];
+    
+    switch (groupingMode) {
+      case 'domain':
+        grouped = await groupByDomain();
+        break;
+      case 'ai':
+        grouped = await groupByAI();
+        break;
+      case 'category':
+      default:
+        grouped = await groupByCategory();
+        break;
+    }
+
+    if (grouped.length > 0) {
+      groupedTabsRef.current = grouped;
       setCanUndo(true);
     }
 
@@ -104,46 +209,36 @@ export const useTabs = () => {
     if (groupedTabsRef.current.length === 0) return;
 
     try {
-      // Step 1: Ungroup all tabs
+      // Ungroup all tabs
       const existingGroupedTabs = [];
       for (const id of groupedTabsRef.current) {
         try {
           const tab = await chrome.tabs.get(id);
           if (tab) existingGroupedTabs.push(id);
-        } catch (e) {
-          // Tab closed, ignore
-        }
+        } catch (e) {}
       }
 
       if (existingGroupedTabs.length > 0) {
         await chrome.tabs.ungroup(existingGroupedTabs);
       }
 
-      // Step 2: Wait for ungroup to settle
       await new Promise(resolve => setTimeout(resolve, 150));
 
-      // Step 3: Restore order by moving tabs one by one
-      // Filter to only tabs that still exist
+      // Restore order
       const currentTabs = await chrome.tabs.query({ currentWindow: true });
       const currentIds = new Set(currentTabs.map(t => t.id));
-      
-      // Get the original order, but only for tabs that still exist
       const originalOrder = originalOrderRef.current.filter(id => currentIds.has(id));
       
-      // Move each tab to its target position (starting from index 0)
       for (let targetIndex = 0; targetIndex < originalOrder.length; targetIndex++) {
         const tabId = originalOrder[targetIndex];
         try {
           await chrome.tabs.move(tabId, { index: targetIndex });
-        } catch (e) {
-          console.warn('Could not move tab:', tabId, e);
-        }
+        } catch (e) {}
       }
 
     } catch (error) {
       console.error("Error undoing groups:", error);
     } finally {
-      // Always reset state
       groupedTabsRef.current = [];
       originalOrderRef.current = [];
       setCanUndo(false);
@@ -154,11 +249,13 @@ export const useTabs = () => {
   return { 
     tabs: sortedTabs, 
     closeTab, 
-    groupTabs, 
     autoGroupTabs, 
     undoGrouping, 
     canUndo,
     sortBy,
-    setSortBy
+    setSortBy,
+    groupingMode,
+    setGroupingMode: updateGroupingMode,
+    aiAvailable
   };
 };
