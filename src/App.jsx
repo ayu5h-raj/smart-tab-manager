@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { useTabs } from './hooks/useTabs';
+import { useSettings } from './hooks/useSettings';
+import { SettingsPanel } from './components/SettingsPanel';
 import './App.css';
 
 // Simple SVG Icons
@@ -7,11 +10,23 @@ const Icons = {
   Undo: () => <svg className="icon" viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" fill="currentColor"/></svg>,
   Trash: () => <svg className="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/></svg>,
   Globe: () => <svg className="icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" fill="currentColor"/></svg>,
-  AI: () => <svg className="icon" viewBox="0 0 24 24"><path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58s9.14-3.47 12.65 0L21 3v7.12z" fill="currentColor"/></svg>
+  Settings: () => <svg className="icon" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" fill="currentColor"/></svg>
 };
 
 function App() {
-  const { tabs, closeTab, autoGroupTabs, undoGrouping, canUndo, sortBy, setSortBy, groupingMode, setGroupingMode, aiAvailable } = useTabs();
+  const { settings, updateSettings, updateProvider, isLoaded } = useSettings();
+  const { tabs, closeTab, autoGroupTabs, undoGrouping, canUndo, sortBy, setSortBy, groupingMode, setGroupingMode, hasApiKey } = useTabs(settings);
+  const [showSettings, setShowSettings] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleTidyUp = async () => {
+    setIsLoading(true);
+    try {
+      await autoGroupTabs();
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Calculate duplicates
   const duplicateSet = new Set();
@@ -49,6 +64,13 @@ function App() {
             {duplicateTabs.length > 0 && (
                 <span className="badge warning">{duplicateTabs.length} Dupes</span>
             )}
+            <button 
+              className="settings-btn" 
+              onClick={() => setShowSettings(true)}
+              title="AI Settings"
+            >
+              ⚙️
+            </button>
           </div>
         </div>
 
@@ -73,9 +95,9 @@ function App() {
             <button 
               className={`mode-btn ${groupingMode === 'ai' ? 'active' : ''}`}
               onClick={() => setGroupingMode('ai')}
-              title={aiAvailable ? "AI-powered grouping" : "AI not available - will use Category"}
+              title={hasApiKey ? "AI-powered grouping" : "Configure API key in settings first"}
             >
-              ✨ AI {!aiAvailable && <span className="badge-small">β</span>}
+              ✨ AI {!hasApiKey && <span className="badge-small">⚙️</span>}
             </button>
           </div>
         </div>
@@ -86,8 +108,12 @@ function App() {
               <Icons.Undo /> Undo
             </button>
           ) : (
-            <button className="btn btn-primary" onClick={autoGroupTabs}>
-              {getModeLabel()} Tidy Up
+            <button 
+              className="btn btn-primary" 
+              onClick={handleTidyUp}
+              disabled={isLoading}
+            >
+              {isLoading ? '⏳ Working...' : `${getModeLabel()} Tidy Up`}
             </button>
           )}
 
@@ -109,9 +135,9 @@ function App() {
             <button 
               className="btn btn-danger" 
               onClick={() => duplicateTabs.forEach(t => closeTab(t.id))}
-              title="Close Duplicates"
+              title={`Close ${duplicateTabs.length} duplicate tab(s)`}
             >
-              <Icons.Trash />
+              🗑️ Close Dupes
             </button>
           )}
         </div>
@@ -145,6 +171,15 @@ function App() {
           </div>
         ))}
       </div>
+
+      {showSettings && (
+        <SettingsPanel 
+          settings={settings}
+          updateSettings={updateSettings}
+          updateProvider={updateProvider}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
     </div>
   );
 }

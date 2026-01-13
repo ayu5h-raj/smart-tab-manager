@@ -343,3 +343,174 @@ h1 {
 ::-webkit-scrollbar-thumb:hover {
   background: #636366;
 }
+
+/* Settings Button */
+.settings-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.settings-btn:hover {
+  background: var(--surface-color);
+  color: var(--text-primary);
+}
+
+/* Settings Panel Overlay */
+.settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.settings-panel {
+  background: var(--surface-color);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.settings-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.close-settings {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.close-settings:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.settings-body {
+  padding: 16px;
+}
+
+.setting-group {
+  margin-bottom: 16px;
+}
+
+.setting-group label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.setting-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-color);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.setting-group input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.provider-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.provider-btn {
+  flex: 1;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.provider-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.provider-btn.active {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+}
+
+.key-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.key-input-row input {
+  flex: 1;
+}
+
+.toggle-key {
+  width: 40px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.toggle-key:hover {
+  background: var(--surface-hover);
+}
+
+.settings-note {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 16px 0 0;
+  opacity: 0.7;
+}
+
+.settings-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px;
+  border-top: 1px solid var(--border-color);
+}

@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { classifyTabs, getCategoryColor } from '../utils/categoryClassifier';
+import { callLLM } from './useSettings';
 
-export const useTabs = () => {
+export const useTabs = (llmSettings) => {
   const [tabs, setTabs] = useState([]);
   const [canUndo, setCanUndo] = useState(false);
   const [sortBy, setSortBy] = useState('default');
-  const [groupingMode, setGroupingMode] = useState('category'); // 'domain' | 'category' | 'ai'
-  const [aiAvailable, setAiAvailable] = useState(false);
+  const [groupingMode, setGroupingMode] = useState('category');
   const groupedTabsRef = useRef([]);
   const originalOrderRef = useRef([]);
 
@@ -19,22 +19,15 @@ export const useTabs = () => {
     }
   };
 
-  // Load saved preferences and check AI availability
+  // Load saved preferences
   useEffect(() => {
-    // Load grouping mode preference
     chrome.storage.local.get(['groupingMode'], (result) => {
       if (result.groupingMode) {
         setGroupingMode(result.groupingMode);
       }
     });
-
-    // Check if Chrome AI is available
-    if (typeof window !== 'undefined' && window.ai) {
-      setAiAvailable(true);
-    }
   }, []);
 
-  // Save grouping mode preference
   const updateGroupingMode = (mode) => {
     setGroupingMode(mode);
     chrome.storage.local.set({ groupingMode: mode });
@@ -91,7 +84,7 @@ export const useTabs = () => {
     return groupId;
   };
 
-  // Group by domain (original behavior)
+  // Group by domain
   const groupByDomain = async () => {
     const domains = {};
     
@@ -115,7 +108,7 @@ export const useTabs = () => {
     return grouped;
   };
 
-  // Group by category (smart mode)
+  // Group by category
   const groupByCategory = async () => {
     const categoryGroups = classifyTabs(tabs);
     const grouped = [];
@@ -130,33 +123,29 @@ export const useTabs = () => {
     return grouped;
   };
 
-  // Group using Chrome AI (experimental)
+  // Group using LLM API
   const groupByAI = async () => {
-    if (!window.ai) {
-      console.warn('Chrome AI not available, falling back to category mode');
+    if (!llmSettings?.apiKey) {
+      console.warn('LLM API key not configured, falling back to category mode');
       return groupByCategory();
     }
 
     try {
-      // Create AI session
-      const session = await window.ai.createTextSession();
-      
-      // Build prompt
       const tabInfo = tabs
         .filter(t => !t.groupId || t.groupId === -1)
         .map(t => `[${t.id}] ${t.title}`)
         .join('\n');
       
-      const prompt = `Categorize these browser tabs into logical groups. Return JSON only.
+      const prompt = `Categorize these browser tabs into logical groups. Return ONLY valid JSON.
 Format: {"GroupName": [tab_ids], ...}
-Use 3-6 groups max. Be concise with group names.
+Use 3-6 groups max. Be concise with group names (1-2 words).
+Tab IDs are integers, include them as numbers not strings.
 
 Tabs:
 ${tabInfo}`;
 
-      const response = await session.prompt(prompt);
+      const response = await callLLM(llmSettings, prompt);
       
-      // Parse AI response
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('Invalid AI response');
       
@@ -164,22 +153,22 @@ ${tabInfo}`;
       const grouped = [];
       
       for (const [groupName, tabIds] of Object.entries(groups)) {
-        if (tabIds.length > 1) {
-          await groupTabsWithColor(tabIds, groupName);
-          grouped.push(...tabIds);
+        const validIds = tabIds.filter(id => tabs.some(t => t.id === id));
+        if (validIds.length > 1) {
+          await groupTabsWithColor(validIds, groupName);
+          grouped.push(...validIds);
         }
       }
       
       return grouped;
     } catch (error) {
       console.error('AI grouping failed:', error);
-      return groupByCategory(); // Fallback
+      return groupByCategory();
     }
   };
 
-  // Main grouping function that routes to the right algorithm
+  // Main grouping function
   const autoGroupTabs = async () => {
-    // Save original order
     originalOrderRef.current = tabs.map(tab => tab.id);
 
     let grouped = [];
@@ -209,7 +198,6 @@ ${tabInfo}`;
     if (groupedTabsRef.current.length === 0) return;
 
     try {
-      // Ungroup all tabs
       const existingGroupedTabs = [];
       for (const id of groupedTabsRef.current) {
         try {
@@ -224,7 +212,6 @@ ${tabInfo}`;
 
       await new Promise(resolve => setTimeout(resolve, 150));
 
-      // Restore order
       const currentTabs = await chrome.tabs.query({ currentWindow: true });
       const currentIds = new Set(currentTabs.map(t => t.id));
       const originalOrder = originalOrderRef.current.filter(id => currentIds.has(id));
@@ -256,6 +243,6 @@ ${tabInfo}`;
     setSortBy,
     groupingMode,
     setGroupingMode: updateGroupingMode,
-    aiAvailable
+    hasApiKey: !!llmSettings?.apiKey
   };
 };
