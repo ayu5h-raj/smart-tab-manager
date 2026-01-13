@@ -233,6 +233,90 @@ ${tabInfo}`;
     }
   };
 
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const focusGroupRef = useRef(null);
+
+  // Focus Mode Logic
+  const toggleFocusMode = async () => {
+    if (isFocusMode) {
+      // Turn OFF: Upgrade "Distractions" group if exists
+      if (focusGroupRef.current) {
+        try {
+          // Check if group still exists
+          await chrome.tabGroups.get(focusGroupRef.current);
+          
+          // Get tabs in group
+          const tabsInGroup = await chrome.tabs.query({ groupId: focusGroupRef.current });
+          const ids = tabsInGroup.map(t => t.id);
+          
+          if (ids.length > 0) {
+            await chrome.tabs.ungroup(ids);
+          }
+        } catch (e) {
+          // Group might have been closed manually
+        }
+        focusGroupRef.current = null;
+      }
+      setIsFocusMode(false);
+      await fetchTabs();
+    } else {
+      // Turn ON: Identify and group distractions
+      let distractionIds = [];
+
+      try {
+        // 1. Try AI if enabled
+        if (llmSettings?.apiKey) {
+           const tabInfo = tabs
+            .filter(t => !t.groupId || t.groupId === -1)
+            .map(t => `[${t.id}] ${t.title} (${new URL(t.url).hostname})`)
+            .join('\n');
+
+           const prompt = `Identify which of these tabs are likely non-productive DISTRACTIONS (social media, video streaming, entertainment, shopping, random browsing) vs productive work.
+Return valid JSON: { "distractionIds": [id1, id2] }
+Be strict. If unsure, assume productive.
+Tabs:
+${tabInfo}`;
+
+            const response = await callLLM(llmSettings, prompt);
+            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const data = JSON.parse(jsonMatch[0]);
+              distractionIds = data.distractionIds || [];
+            }
+        } else {
+          // 2. Fallback: Keyword/Domain matching
+          const blockedDomains = ['youtube.com', 'netflix.com', 'twitch.tv', 'reddit.com', 'twitter.com', 'x.com', 'facebook.com', 'instagram.com', 'tiktok.com', 'pinterest.com', '9gag.com', 'imdb.com', 'hulu.com', 'disneyplus.com'];
+          
+          distractionIds = tabs
+            .filter(t => !t.groupId || t.groupId === -1)
+            .filter(t => {
+              try {
+                const hostname = new URL(t.url).hostname;
+                return blockedDomains.some(d => hostname.includes(d));
+              } catch { return false; }
+            })
+            .map(t => t.id);
+        }
+
+        if (distractionIds.length > 0) {
+          const groupId = await chrome.tabs.group({ tabIds: distractionIds });
+          await chrome.tabGroups.update(groupId, { 
+            title: 'Distractions 🚫', 
+            collapsed: true,
+            color: 'red'
+          });
+          focusGroupRef.current = groupId;
+        }
+
+      } catch (error) {
+        console.error("Focus mode error:", error);
+      }
+      
+      setIsFocusMode(true);
+      await fetchTabs();
+    }
+  };
+
   return { 
     tabs: sortedTabs, 
     closeTab, 
@@ -243,6 +327,8 @@ ${tabInfo}`;
     setSortBy,
     groupingMode,
     setGroupingMode: updateGroupingMode,
-    hasApiKey: !!llmSettings?.apiKey
+    hasApiKey: !!llmSettings?.apiKey,
+    isFocusMode,
+    toggleFocusMode
   };
 };

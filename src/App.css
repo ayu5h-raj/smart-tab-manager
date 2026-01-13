@@ -535,6 +535,35 @@ h1 {
   background: #636366;
 }
 
+/* Focus Mode Button */
+.focus-btn {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  width: auto;
+  min-width: 40px;
+  padding: 0 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.focus-btn:hover {
+  background-color: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.focus-btn.active {
+  background-color: rgba(16, 185, 129, 0.15);
+  border-color: #10b981;
+  color: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+}
+
 /* Settings Button */
 .settings-btn {
   width: 28px;

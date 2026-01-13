@@ -15,7 +15,7 @@ const Icons = {
 
 function App() {
   const { settings, updateSettings, updateProvider, isLoaded } = useSettings();
-  const { tabs, closeTab, autoGroupTabs, undoGrouping, canUndo, sortBy, setSortBy, groupingMode, setGroupingMode, hasApiKey } = useTabs(settings);
+  const { tabs, closeTab, autoGroupTabs, undoGrouping, canUndo, sortBy, setSortBy, groupingMode, setGroupingMode, hasApiKey, isFocusMode, toggleFocusMode } = useTabs(settings);
   const [showSettings, setShowSettings] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -135,6 +135,14 @@ function App() {
               {isLoading ? '⏳' : '✨'} {isLoading ? 'Working...' : 'Tidy Up'}
             </button>
           )}
+
+          <button 
+            className={`focus-btn ${isFocusMode ? 'active' : ''}`}
+            onClick={toggleFocusMode}
+            title={isFocusMode ? "Disable Focus Mode" : "Enable Focus Mode"}
+          >
+            {isFocusMode ? '🎯 ON' : '🎯'}
+          </button>
 
           <div className="select-wrapper">
             <select 
