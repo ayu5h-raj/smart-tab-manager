@@ -13,10 +13,10 @@ Say goodbye to "tab overload" and focus on what matters.
 
 - **🤖 AI-Powered Grouping**: Automatically analyzes your open tabs and sorts them into meaningful groups (e.g., "Dev Work", "Research", "Entertainment").
 - **⚡ Universal LLM Support**: Connect to your favorite AI provider:
-  - **Google Gemini** (Free tier available!)
-  - **OpenAI** (GPT-4o, GPT-3.5)
-  - **Anthropic** (Claude 3.5 Sonnet)
-  - **OpenRouter** (DeepSeek, Llama 3, etc.)
+  - **Google Gemini** (Gemini 3 Pro, Gemini 2.5 Flash)
+  - **OpenAI** (GPT-5, GPT-4o)
+  - **Anthropic** (Claude 4 Sonnet, Opus 4.5)
+  - **OpenRouter** (DeepSeek V3, Llama 4, etc.)
   - **Custom endpoints** (LM Studio, Ollama)
 - **🔍 Smart Search**: Instantly filter tabs by title or URL with a blazing fast search bar.
 - **🔒 Privacy First**: Your API keys and tab data are stored **locally** in your browser. We never track you.
