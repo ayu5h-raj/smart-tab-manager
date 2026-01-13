@@ -38,6 +38,12 @@ export function useSettings() {
     } else if (provider === 'anthropic') {
       baseUrl = 'https://api.anthropic.com/v1';
       model = 'claude-3-haiku-20240307';
+    } else if (provider === 'gemini') {
+      baseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai';
+      model = 'gemini-1.5-flash';
+    } else if (provider === 'openrouter') {
+      baseUrl = 'https://openrouter.ai/api/v1';
+      model = 'openai/gpt-3.5-turbo';
     }
 
     updateSettings({ provider, baseUrl, model });

@@ -18,6 +18,15 @@ function App() {
   const { tabs, closeTab, autoGroupTabs, undoGrouping, canUndo, sortBy, setSortBy, groupingMode, setGroupingMode, hasApiKey } = useTabs(settings);
   const [showSettings, setShowSettings] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter tabs by search query
+  const filteredTabs = searchQuery.trim()
+    ? tabs.filter(tab => 
+        tab.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tab.url.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : tabs;
 
   const handleTidyUp = async () => {
     setIsLoading(true);
@@ -80,6 +89,25 @@ function App() {
           </div>
         </div>
 
+        {/* Search Bar */}
+        <div className="search-row">
+          <input
+            type="text"
+            className="search-input"
+            placeholder="🔍 Search tabs..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button 
+              className="search-clear" 
+              onClick={() => setSearchQuery('')}
+            >
+              ×
+            </button>
+          )}
+        </div>
+
         {/* Row 2: Mode + Tidy Up + Sort */}
         <div className="header-row-2">
           <div className="select-wrapper mode-select">
@@ -124,7 +152,7 @@ function App() {
       </div>
 
       <div className="tab-list">
-        {tabs.map((tab) => (
+        {filteredTabs.map((tab) => (
           <div 
             key={tab.id} 
             className={`tab-item ${tab.active ? 'active' : ''} ${duplicateSet.has(tab.id) ? 'duplicate' : ''}`}
