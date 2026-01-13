@@ -7,8 +7,6 @@ const updateBadge = async () => {
     let duplicateCount = 0;
 
     tabs.forEach((tab) => {
-      // Normalize URL to handle potential trailing slashes or hash differences if needed
-      // For now, strict equality
       const url = tab.url;
       if (!url) return;
 
@@ -50,8 +48,3 @@ chrome.runtime.onInstalled.addListener(() => {
   updateBadge();
   console.log("Smart Tab Manager installed.");
 });
-
-// Handle Side Panel opening
-chrome.sidePanel
-  .setPanelBehavior({ openPanelOnActionClick: true })
-  .catch((error) => console.error(error));

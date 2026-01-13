@@ -4,7 +4,8 @@ const DEFAULT_SETTINGS = {
   provider: 'openai', // 'openai' | 'anthropic' | 'custom'
   baseUrl: 'https://api.openai.com/v1',
   model: 'gpt-4o-mini',
-  apiKey: ''
+  apiKey: '',
+  providerSettings: {} // Stores {provider: {baseUrl, model}} for each provider
 };
 
 export function useSettings() {

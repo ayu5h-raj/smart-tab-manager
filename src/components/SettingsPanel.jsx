@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export function SettingsPanel({ settings, updateSettings, updateProvider, onClose }) {
+export function SettingsPanel({ settings, updateSettings, onClose }) {
   const [localSettings, setLocalSettings] = useState(settings);
   const [showKey, setShowKey] = useState(false);
 
@@ -10,18 +10,43 @@ export function SettingsPanel({ settings, updateSettings, updateProvider, onClos
   };
 
   const handleProviderChange = (provider) => {
-    let baseUrl = localSettings.baseUrl;
-    let model = localSettings.model;
+    // Save current settings for the current provider before switching
+    const updatedProviderSettings = {
+      ...localSettings.providerSettings,
+      [localSettings.provider]: {
+        baseUrl: localSettings.baseUrl,
+        model: localSettings.model
+      }
+    };
 
-    if (provider === 'openai') {
-      baseUrl = 'https://api.openai.com/v1';
-      model = 'gpt-4o-mini';
-    } else if (provider === 'anthropic') {
-      baseUrl = 'https://api.anthropic.com/v1';
-      model = 'claude-3-haiku-20240307';
+    // Get settings for new provider (either saved or defaults)
+    let newBaseUrl, newModel;
+    
+    if (updatedProviderSettings[provider]) {
+      // Restore saved settings for this provider
+      newBaseUrl = updatedProviderSettings[provider].baseUrl;
+      newModel = updatedProviderSettings[provider].model;
+    } else {
+      // Use defaults
+      if (provider === 'openai') {
+        newBaseUrl = 'https://api.openai.com/v1';
+        newModel = 'gpt-4o-mini';
+      } else if (provider === 'anthropic') {
+        newBaseUrl = 'https://api.anthropic.com/v1';
+        newModel = 'claude-3-haiku-20240307';
+      } else {
+        newBaseUrl = '';
+        newModel = '';
+      }
     }
 
-    setLocalSettings({ ...localSettings, provider, baseUrl, model });
+    setLocalSettings({
+      ...localSettings,
+      provider,
+      baseUrl: newBaseUrl,
+      model: newModel,
+      providerSettings: updatedProviderSettings
+    });
   };
 
   return (

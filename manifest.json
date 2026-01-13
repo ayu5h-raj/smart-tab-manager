@@ -6,18 +6,15 @@
   "permissions": [
     "tabs",
     "tabGroups",
-    "storage",
-    "sidePanel"
+    "storage"
   ],
   "background": {
     "service_worker": "src/background.js",
     "type": "module"
   },
-  "side_panel": {
-    "default_path": "index.html"
-  },
   "action": {
-    "default_title": "Open Tab Manager"
+    "default_title": "Smart Tab Manager",
+    "default_popup": "index.html"
   },
   "icons": {
     "16": "icons/icon16.png",

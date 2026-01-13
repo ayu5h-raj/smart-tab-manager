@@ -57,63 +57,54 @@ function App() {
   return (
     <div className="container">
       <div className="header-section">
-        <div className="title-row">
-          <h1>My Tabs</h1>
-          <div className="badge-row">
-            <span className="badge">{tabs.length}</span>
+        {/* Row 1: Title + Stats + Actions */}
+        <div className="header-row-1">
+          <h1>My Tabs <span className="tab-count">({tabs.length})</span></h1>
+          <div className="header-actions">
             {duplicateTabs.length > 0 && (
-                <span className="badge warning">{duplicateTabs.length} Dupes</span>
+              <button 
+                className="compact-btn danger tooltip" 
+                onClick={() => duplicateTabs.forEach(t => closeTab(t.id))}
+                data-tip={`Close ${duplicateTabs.length} duplicate(s)`}
+              >
+                🗑️ {duplicateTabs.length}
+              </button>
             )}
             <button 
-              className="settings-btn" 
+              className="compact-btn tooltip" 
               onClick={() => setShowSettings(true)}
-              title="AI Settings"
+              data-tip="AI Settings"
             >
               ⚙️
             </button>
           </div>
         </div>
 
-        {/* Mode Selector Row */}
-        <div className="mode-row">
-          <span className="mode-label">Group by:</span>
-          <div className="mode-buttons">
-            <button 
-              className={`mode-btn ${groupingMode === 'category' ? 'active' : ''}`}
-              onClick={() => setGroupingMode('category')}
-              title="Group by category (Work, Entertainment, etc.)"
+        {/* Row 2: Mode + Tidy Up + Sort */}
+        <div className="header-row-2">
+          <div className="select-wrapper mode-select">
+            <select 
+              value={groupingMode} 
+              onChange={(e) => setGroupingMode(e.target.value)}
+              className="compact-select"
             >
-              📁 Category
-            </button>
-            <button 
-              className={`mode-btn ${groupingMode === 'domain' ? 'active' : ''}`}
-              onClick={() => setGroupingMode('domain')}
-              title="Group by website domain"
-            >
-              🌐 Domain
-            </button>
-            <button 
-              className={`mode-btn ${groupingMode === 'ai' ? 'active' : ''}`}
-              onClick={() => setGroupingMode('ai')}
-              title={hasApiKey ? "AI-powered grouping" : "Configure API key in settings first"}
-            >
-              ✨ AI {!hasApiKey && <span className="badge-small">⚙️</span>}
-            </button>
+              <option value="category">📁 Category</option>
+              <option value="domain">🌐 Domain</option>
+              <option value="ai">✨ AI {!hasApiKey ? '⚙️' : ''}</option>
+            </select>
           </div>
-        </div>
 
-        <div className="toolbar">
-           {canUndo ? (
-            <button className="btn" onClick={undoGrouping}>
-              <Icons.Undo /> Undo
+          {canUndo ? (
+            <button className="tidy-btn" onClick={undoGrouping}>
+              ↩️ Undo
             </button>
           ) : (
             <button 
-              className="btn btn-primary" 
+              className="tidy-btn primary" 
               onClick={handleTidyUp}
               disabled={isLoading}
             >
-              {isLoading ? '⏳ Working...' : `${getModeLabel()} Tidy Up`}
+              {isLoading ? '⏳' : '✨'} {isLoading ? 'Working...' : 'Tidy Up'}
             </button>
           )}
 
@@ -121,25 +112,14 @@ function App() {
             <select 
               value={sortBy} 
               onChange={(e) => setSortBy(e.target.value)} 
-              className="sort-select"
+              className="compact-select"
             >
               <option value="default">Default</option>
-              <option value="title">Name</option>
-              <option value="domain">Website</option>
+              <option value="title">A-Z</option>
+              <option value="domain">Site</option>
               <option value="recent">Recent</option>
             </select>
-            <div className="select-arrow">▼</div>
           </div>
-
-          {duplicateTabs.length > 0 && (
-            <button 
-              className="btn btn-danger" 
-              onClick={() => duplicateTabs.forEach(t => closeTab(t.id))}
-              title={`Close ${duplicateTabs.length} duplicate tab(s)`}
-            >
-              🗑️ Close Dupes
-            </button>
-          )}
         </div>
       </div>
 
