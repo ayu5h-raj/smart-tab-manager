@@ -75,9 +75,6 @@ export function classifyTabs(tabs) {
   const groups = {};
   
   tabs.forEach(tab => {
-    // Skip already grouped tabs
-    if (tab.groupId && tab.groupId !== -1) return;
-    
     const category = classifyTab(tab);
     if (!groups[category]) groups[category] = [];
     groups[category].push(tab.id);
