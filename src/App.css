@@ -257,6 +257,17 @@ h1 {
   cursor: not-allowed;
 }
 
+.tidy-btn.secondary {
+  background: transparent;
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+.tidy-btn.secondary:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
 /* Responsive - Very Narrow (< 280px) */
 @media (max-width: 280px) {
   .header-section {

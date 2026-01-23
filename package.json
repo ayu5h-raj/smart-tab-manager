@@ -1,7 +1,7 @@
 {
   "name": "smart-tab-manager",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "test": "jest",
     "test:watch": "jest --watch",
-    "release": "vite build && zip -r smart-tab-manager-v1.1.0.zip dist"
+    "release": "vite build && zip -r smart-tab-manager-v1.2.0.zip dist"
   },
   "dependencies": {
     "react": "^19.2.0",

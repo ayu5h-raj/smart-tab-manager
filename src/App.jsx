@@ -15,7 +15,7 @@ const Icons = {
 
 function App() {
   const { settings, updateSettings, updateProvider, isLoaded } = useSettings();
-  const { tabs, closeTab, autoGroupTabs, undoGrouping, canUndo, sortBy, setSortBy, groupingMode, setGroupingMode, hasApiKey } = useTabs(settings);
+  const { tabs, closeTab, autoGroupTabs, ungroupAll, undoGrouping, canUndo, sortBy, setSortBy, groupingMode, setGroupingMode, hasApiKey } = useTabs(settings);
   const [showSettings, setShowSettings] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,7 +108,7 @@ function App() {
           )}
         </div>
 
-        {/* Row 2: Mode + Tidy Up + Sort */}
+        {/* Row 2: Mode + Actions + Sort */}
         <div className="header-row-2">
           <div className="select-wrapper mode-select">
             <select 
@@ -127,13 +127,18 @@ function App() {
               ↩️ Undo
             </button>
           ) : (
-            <button 
-              className="tidy-btn primary" 
-              onClick={handleTidyUp}
-              disabled={isLoading}
-            >
-              {isLoading ? '⏳' : '✨'} {isLoading ? 'Working...' : 'Tidy Up'}
-            </button>
+            <>
+              <button className="tidy-btn secondary" onClick={ungroupAll}>
+                📤 Ungroup
+              </button>
+              <button 
+                className="tidy-btn primary" 
+                onClick={handleTidyUp}
+                disabled={isLoading}
+              >
+                {isLoading ? '⏳' : '✨'} {isLoading ? 'Working...' : 'Tidy Up'}
+              </button>
+            </>
           )}
 
           <div className="select-wrapper">

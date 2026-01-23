@@ -2,8 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { classifyTabs, getCategoryColor } from '../utils/categoryClassifier';
 import { callLLM } from './useSettings';
 
-const UNDO_EXPIRY_MS = 30 * 1000; // 30 seconds
-
 export const useTabs = (llmSettings) => {
   const [tabs, setTabs] = useState([]);
   const [canUndo, setCanUndo] = useState(false);
@@ -20,22 +18,11 @@ export const useTabs = (llmSettings) => {
     }
   };
 
-  // Load saved preferences AND undo snapshot
+  // Load saved preferences (undo snapshot is session-only now)
   useEffect(() => {
-    chrome.storage.local.get(['groupingMode', 'undoSnapshot'], (result) => {
+    chrome.storage.local.get(['groupingMode'], (result) => {
       if (result.groupingMode) {
         setGroupingMode(result.groupingMode);
-      }
-      // Check if snapshot exists and is not expired
-      if (result.undoSnapshot) {
-        const age = Date.now() - result.undoSnapshot.timestamp;
-        if (age < UNDO_EXPIRY_MS) {
-          setUndoSnapshot(result.undoSnapshot);
-          setCanUndo(true);
-        } else {
-          // Expired, clear it
-          chrome.storage.local.remove('undoSnapshot');
-        }
       }
     });
   }, []);
@@ -201,8 +188,7 @@ ${tabInfo}`;
       timestamp: Date.now()
     };
     
-    // Persist to storage
-    await chrome.storage.local.set({ undoSnapshot: snapshot });
+    // Session-only: just set in state, no storage persistence
     setUndoSnapshot(snapshot);
 
     // Ungroup all currently grouped tabs first (so they can be regrouped cleanly)
@@ -236,6 +222,48 @@ ${tabInfo}`;
 
     if (grouped.length > 0) {
       setCanUndo(true);
+    }
+
+    await fetchTabs();
+  };
+
+  // Ungroup all tabs (with undo support)
+  const ungroupAll = async () => {
+    // Get existing group metadata BEFORE ungrouping
+    let groupMetadata = {};
+    try {
+      const groups = await chrome.tabGroups.query({ windowId: chrome.windows.WINDOW_ID_CURRENT });
+      groups.forEach(g => {
+        groupMetadata[g.id] = { title: g.title || '', color: g.color || 'grey' };
+      });
+    } catch (e) {
+      console.warn("Failed to get group metadata:", e);
+    }
+
+    // Save snapshot BEFORE ungrouping
+    const snapshot = {
+      tabs: tabs.map(tab => ({
+        id: tab.id,
+        groupId: tab.groupId || -1,
+        index: tab.index
+      })),
+      groups: groupMetadata,
+      timestamp: Date.now()
+    };
+    setUndoSnapshot(snapshot);
+
+    // Ungroup all currently grouped tabs
+    const groupedTabIds = tabs
+      .filter(t => t.groupId && t.groupId !== -1)
+      .map(t => t.id);
+    
+    if (groupedTabIds.length > 0) {
+      try {
+        await chrome.tabs.ungroup(groupedTabIds);
+        setCanUndo(true);
+      } catch (e) {
+        console.warn("Failed to ungroup tabs:", e);
+      }
     }
 
     await fetchTabs();
@@ -319,8 +347,7 @@ ${tabInfo}`;
     } catch (error) {
       console.error("Error undoing groups:", error);
     } finally {
-      // Clear snapshot
-      await chrome.storage.local.remove('undoSnapshot');
+      // Clear snapshot (session-only, no storage to clear)
       setUndoSnapshot(null);
       setCanUndo(false);
       await fetchTabs();
@@ -331,6 +358,7 @@ ${tabInfo}`;
     tabs: sortedTabs, 
     closeTab, 
     autoGroupTabs, 
+    ungroupAll,
     undoGrouping, 
     canUndo,
     sortBy,
